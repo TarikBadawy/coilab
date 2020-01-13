@@ -1,0 +1,8 @@
+{
+  "short_name": "coilab",
+  "name": "your personal workspace",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}
