@@ -34,55 +34,38 @@ class SignupCard extends Component {
 
   render() {
     return (
-      <div className="card mx-auto container mt-5">
+      <div className="card mx-auto mt-5" style={{ maxWidth: "25rem" }}>
+        <div className="card-header">Sign up</div>
         <div className="card-body">
           <form>
-            <FormGroup
-              label="username"
+            <input
+              placeholder="Username"
               type="text"
-              className="form-control"
+              className="form-control mb-4"
               id="UsernameInput"
-              handleChange={this.handleUsernameChange}
+              onChange={this.handleUsernameChange}
             />
-            <FormGroup
-              label="email address"
+            <input
+              placeholder="Email Address"
               type="email"
-              className="form-control"
+              className="form-control mb-4"
               id="EmailInput"
-              handleChange={this.handleEmailChange}
+              onChange={this.handleEmailChange}
             />
-            <FormGroup
-              label="password"
+            <input
+              placeholder="Password"
               type="password"
-              className="form-control"
+              className="form-control mb-4"
               id="PasswordInput"
-              handleChange={this.handlePasswordChange}
+              onChange={this.handlePasswordChange}
             />
           </form>
+        </div>
+        <div className="card-footer">
           <button onClick={this.handleSubmit} className="btn btn-dark">
-            Submit
+            Sign up
           </button>
         </div>
-      </div>
-    );
-  }
-}
-
-class FormGroup extends Component {
-  render() {
-    return (
-      <div className="form-group">
-        {this.props.label && <label>{this.props.label}</label>}
-        <input
-          className="form-control"
-          type={this.props.type}
-          onChange={this.props.handleChange}
-          id={this.props.id}
-        />
-        {this.props.small && (
-          <small className="form-text text-muted">{this.props.small}</small>
-        )}
-        {this.props.children}
       </div>
     );
   }

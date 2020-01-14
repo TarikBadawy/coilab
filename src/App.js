@@ -1,15 +1,23 @@
 import React from "react";
-//import GetData from "./GetData";
-import Navbar from "./components/Navbar";
-import Login from "./components/Signup";
+import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
+import HomePage from "./components/HomePage";
+import Navbar from "./components/CoilabNavbar";
+import Signup from "./components/Signup";
+import Login from "./components/Login";
+import "bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 function App() {
   return (
-    <div className="App">
+    <Router>
       <Navbar />
-      <Login />
-    </div>
+      <Switch>
+        <Route path="/" exact component={HomePage} />
+        <Route path="/login" exact component={Login} />
+        <Route path="/signup" exact component={Signup} />
+        {/* <Route path="/profile" exact component={Profile} /> */}
+      </Switch>
+    </Router>
   );
 }
 
