@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import { Redirect } from "react-router-dom";
 import { connect } from "react-redux";
 import { userLogIn } from "../redux/actions/userActions";
+import Navbar from "./Navbar";
 import {
   signupUpdateValues,
   signupSubmitForm,
@@ -43,7 +44,7 @@ class SignupCard extends Component {
 
   render() {
     if (this.props.user.login_status === "success") {
-      return <Redirect to="space" />;
+      return <Redirect to="/" />;
     }
 
     let error_message = undefined;
@@ -103,47 +104,50 @@ class SignupCard extends Component {
     }
 
     return (
-      <div className="card mx-auto mt-5" style={{ maxWidth: "25rem" }}>
-        <div className="card-header">Sign up</div>
-        <div className="card-body">
-          {this.props.signup.form_status !== "success" && (
-            <form>
-              <SignupInput
-                name="username"
-                placeholder="Username"
-                onChange={this.handleChange}
-                value={this.props.signup.username}
-              />
-              <SignupInput
-                name="email"
-                type="email"
-                placeholder="Email Address"
-                onChange={this.handleChange}
-                value={this.props.signup.email}
-              />
-              <SignupInput
-                name="password"
-                type="password"
-                placeholder="Password"
-                onChange={this.handleChange}
-                value={this.props.signup.password}
-              />
-            </form>
-          )}
-          {this.props.signup.pin_status !== "success" &&
-            this.props.signup.form_status === "success" && (
+      <>
+        <Navbar />
+        <div className="card mx-auto mt-5" style={{ maxWidth: "25rem" }}>
+          <div className="card-header">Sign up</div>
+          <div className="card-body">
+            {this.props.signup.form_status !== "success" && (
               <form>
                 <SignupInput
-                  name="signup_pin"
-                  placeholder="PIN"
+                  name="username"
+                  placeholder="Username"
                   onChange={this.handleChange}
+                  value={this.props.signup.username}
+                />
+                <SignupInput
+                  name="email"
+                  type="email"
+                  placeholder="Email Address"
+                  onChange={this.handleChange}
+                  value={this.props.signup.email}
+                />
+                <SignupInput
+                  name="password"
+                  type="password"
+                  placeholder="Password"
+                  onChange={this.handleChange}
+                  value={this.props.signup.password}
                 />
               </form>
             )}
-          {error_message && <p className="text-danger">{error_message}</p>}
+            {this.props.signup.pin_status !== "success" &&
+              this.props.signup.form_status === "success" && (
+                <form>
+                  <SignupInput
+                    name="signup_pin"
+                    placeholder="PIN"
+                    onChange={this.handleChange}
+                  />
+                </form>
+              )}
+            {error_message && <p className="text-danger">{error_message}</p>}
+          </div>
+          <div className="card-footer">{button}</div>
         </div>
-        <div className="card-footer">{button}</div>
-      </div>
+      </>
     );
   }
 }

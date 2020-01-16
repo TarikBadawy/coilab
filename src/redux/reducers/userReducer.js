@@ -8,7 +8,8 @@ const initialState = {
   username: "",
   email: "",
   login_token: "",
-  login_status: ""
+  login_status: "",
+  logout_status: undefined
 };
 
 export default function(state = initialState, action) {

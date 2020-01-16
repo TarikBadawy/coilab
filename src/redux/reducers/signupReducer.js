@@ -1,4 +1,9 @@
-import { SIGNUP_UPDATE_VALUES, SIGNUP_SUBMIT_FORM, SIGNUP_SUBMIT_PIN } from "../actions/types";
+import {
+  SIGNUP_UPDATE_VALUES,
+  SIGNUP_SUBMIT_FORM,
+  SIGNUP_SUBMIT_PIN,
+  SIGNUP_END
+} from "../actions/types";
 
 const initialState = {
   username: "",
@@ -6,11 +11,10 @@ const initialState = {
   password: "",
   signup_pin: "",
   form_status: "",
-  pin_status: "",
-
+  pin_status: ""
 };
 
-export default function (state = initialState, action) {
+export default function(state = initialState, action) {
   switch (action.type) {
     case SIGNUP_UPDATE_VALUES:
       return { ...state, ...action.payload };
@@ -20,6 +24,9 @@ export default function (state = initialState, action) {
 
     case SIGNUP_SUBMIT_PIN:
       return { ...state, pin_status: action.payload };
+
+    case SIGNUP_END:
+      return action.payload;
 
     default:
       return state;
