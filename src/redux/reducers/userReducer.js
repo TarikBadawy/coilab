@@ -1,25 +1,19 @@
-import {
-  USER_LOG_IN,
-  USER_LOG_OUT,
-  USER_STATUS_UPDATE
-} from "../actions/types";
+import { USER_LOGIN, USER_LOGOUT } from "../actions/types";
 
 const initialState = {
-  username: "",
-  email: "",
-  login_token: "",
-  login_status: "",
-  logout_status: undefined
+  username: undefined,
+  email: undefined,
+  auth_token: undefined
 };
 
 export default function(state = initialState, action) {
   switch (action.type) {
-    case USER_LOG_IN:
+    case USER_LOGIN:
       return { ...action.payload };
-    case USER_LOG_OUT:
+
+    case USER_LOGOUT:
       return { ...initialState };
-    case USER_STATUS_UPDATE:
-      return { ...state, login_status: action.payload };
+
     default:
       return state;
   }

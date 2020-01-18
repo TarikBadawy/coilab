@@ -1,10 +1,10 @@
 import userReducer from "./userReducer";
-import signupReducer from "./signupReducer";
+import errorReducer from "./errorReducer";
 import { combineReducers } from "redux";
 
 const combinedReducers = combineReducers({
   user: userReducer,
-  signup: signupReducer
+  error: errorReducer
 });
 
 export default combinedReducers;

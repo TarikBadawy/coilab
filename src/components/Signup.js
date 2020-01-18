@@ -3,212 +3,221 @@ import PropTypes from "prop-types";
 import { Redirect } from "react-router-dom";
 import { connect } from "react-redux";
 import { userLogIn } from "../redux/actions/userActions";
-import Navbar from "./Navbar";
-import {
-  signupUpdateValues,
-  signupSubmitForm,
-  signupSubmitPin,
-  signupEnd
-} from "../redux/actions/signupActions";
+import { ERRMSG } from "../redux/actions/types";
+import axios from "axios";
 
-class SignupCard extends Component {
-  handleFormSubmit = () => {
-    this.props.signupSubmitForm(
-      this.props.signup.username,
-      this.props.signup.email,
-      this.props.signup.password
-    );
+export class Signup extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      username: "",
+      email: "",
+      password: "",
+      verification_code: "",
+      signup_completed: false,
+      verification_completed: false,
+      error: undefined
+    };
+  }
+
+  handle_change = e => {
+    this.setState({ [e.target.id]: e.target.value });
   };
 
-  handlePinSubmit = () => {
-    this.props.signupSubmitPin(
-      this.props.signup.username,
-      this.props.signup.signup_pin
-    );
+  handle_signup_form_submit = () => {
+    let request = new URLSearchParams({
+      signup: true,
+      username: this.state.username,
+      email: this.state.email,
+      password: this.state.password
+    });
+    axios
+      .post("http://api.coilab.com/user", request)
+      .then(res => res.data.status)
+      .then(status => {
+        status === "success"
+          ? this.setState({ signup_completed: true, error: undefined })
+          : this.setState({ error: ERRMSG[status] });
+      })
+      .catch(err => console.log(err));
   };
 
-  handleChange = e => {
-    this.props.signupUpdateValues({ [e.target.name]: e.target.value });
+  handle_verification_form_submit = () => {
+    let request = new URLSearchParams({
+      signup_token_verification: true,
+      username: this.state.username,
+      signup_token: this.state.verification_code
+    });
+    axios
+      .post("http://api.coilab.com/user", request)
+      .then(res => res.data.status)
+      .then(status => {
+        status === "success"
+          ? this.setState({
+              verification_completed: true,
+              error: undefined
+            })
+          : this.setState({ error: ERRMSG[status] });
+      });
   };
 
   componentDidUpdate() {
-    if (
-      this.props.signup.form_status === "success" &&
-      this.props.signup.pin_status === "success" &&
-      this.props.user.login_status === ""
-    ) {
-      this.props.userLogIn(this.props.signup.email, this.props.signup.password);
-      this.props.signupEnd();
+    if (this.state.signup_completed && this.state.verification_completed) {
+      this.props.userLogIn(this.state.email, this.state.password);
     }
   }
 
   render() {
-    if (this.props.user.login_status === "success") {
-      return <Redirect to="/" />;
-    }
+    let redirect = <Redirect to="/" />;
 
-    let error_message = undefined;
-    switch (this.props.signup.form_status) {
-      case "password_invalid":
-        error_message =
-          "The password can only contain between 8 and 128 characters";
-        break;
-      case "email_taken":
-        error_message = "The email is already taken";
-        break;
-      case "email_invalid":
-        error_message = "This email is invalid";
-        break;
-      case "username_taken":
-        error_message = "The username is already taken";
-        break;
-      case "username_invalid":
-        error_message =
-          "This username is invalid [CHARACTERS: A-Z / a-z / 0-9, LENGTH: 5-20]";
-        break;
-      case "empty_fields":
-        error_message = "All fields sre required";
-        break;
-      default:
-        break;
-    }
-
-    switch (this.props.signup.pin_status) {
-      case "signup_token_invalid":
-        error_message = "The pin is invalid";
-        break;
-      case "signup_token_invalid_new_email_sent":
-        error_message =
-          "The pin is invalid. A new verification email will be sent";
-        break;
-      case "signup_token_expired":
-        error_message = "Your pin has expired";
-        break;
-      default:
-        break;
-    }
-
-    let button = undefined;
-    if (this.props.signup.form_status !== "success") {
-      button = (
-        <button onClick={this.handleFormSubmit} className="btn btn-dark">
-          sign in
-        </button>
-      );
-    } else if (this.props.signup.pin_status !== "success") {
-      button = (
-        <button onClick={this.handlePinSubmit} className="btn btn-dark">
-          verify email
-        </button>
-      );
-    }
-
-    return (
-      <>
-        <Navbar />
-        <div className="card mx-auto mt-5" style={{ maxWidth: "25rem" }}>
-          <div className="card-header">Sign up</div>
-          <div className="card-body">
-            {this.props.signup.form_status !== "success" && (
-              <form>
-                <SignupInput
-                  name="username"
-                  placeholder="Username"
-                  onChange={this.handleChange}
-                  value={this.props.signup.username}
-                />
-                <SignupInput
-                  name="email"
-                  type="email"
-                  placeholder="Email Address"
-                  onChange={this.handleChange}
-                  value={this.props.signup.email}
-                />
-                <SignupInput
-                  name="password"
-                  type="password"
-                  placeholder="Password"
-                  onChange={this.handleChange}
-                  value={this.props.signup.password}
-                />
-              </form>
-            )}
-            {this.props.signup.pin_status !== "success" &&
-              this.props.signup.form_status === "success" && (
-                <form>
-                  <SignupInput
-                    name="signup_pin"
-                    placeholder="PIN"
-                    onChange={this.handleChange}
-                  />
-                </form>
-              )}
-            {error_message && <p className="text-danger">{error_message}</p>}
-          </div>
-          <div className="card-footer">{button}</div>
-        </div>
-      </>
-    );
-  }
-}
-
-class SignupInput extends Component {
-  render() {
-    return (
-      <input
-        id={this.props.name + "Input"}
-        className="form-control mb-4"
-        {...this.props}
+    let signup_form = (
+      <SignupForm
+        handle_change={this.handle_change}
+        handle_signup_form_submit={this.handle_signup_form_submit}
+        error={this.state.error}
+        username={this.state.username}
+        email={this.state.email}
+        password={this.state.password}
       />
     );
+
+    let verification_form = (
+      <VerificationForm
+        handle_change={this.handle_change}
+        handle_verification_form_submit={this.handle_verification_form_submit}
+        error={this.state.error}
+        verification_code={this.state.verification_code}
+      />
+    );
+
+    let edge_case = <div>something went wrong</div>;
+
+    return this.props.auth_token
+      ? redirect
+      : !this.state.signup_completed
+      ? signup_form
+      : !this.state.verification_completed
+      ? verification_form
+      : edge_case;
   }
 }
 
-SignupCard.propTypes = {
-  signup: PropTypes.exact({
-    username: PropTypes.string,
-    email: PropTypes.string,
-    password: PropTypes.string,
-    signup_pin: PropTypes.string,
-    form_status: PropTypes.oneOf([
-      "",
-      "success",
-      "password_invalid",
-      "email_taken",
-      "email_invalid",
-      "username_taken",
-      "username_invalid",
-      "empty_fields"
-    ]),
-    pin_status: PropTypes.oneOf([
-      "",
-      "success",
-      "signup_token_invalid",
-      "signup_token_invalid_new_email_sent",
-      "signup_token_expired"
-    ]).isRequired
-  })
+class SignupForm extends Component {
+  render() {
+    return (
+      <FormCard header="Sign up">
+        {this.props.error && <p className="text-danger">{this.props.error}</p>}
+        <form>
+          <input
+            className="form-control mb-4"
+            type="text"
+            id="username"
+            placeholder="Username"
+            onChange={this.props.handle_change}
+            value={this.props.username}
+          />
+          <input
+            className="form-control mb-4"
+            type="email"
+            id="email"
+            placeholder="Email Address"
+            onChange={this.props.handle_change}
+            value={this.props.email}
+          />
+          <input
+            className="form-control mb-4"
+            type="password"
+            id="password"
+            placeholder="Password"
+            onChange={this.props.handle_change}
+            value={this.props.password}
+          />
+          <button
+            className="btn btn-dark"
+            type="button"
+            onClick={this.props.handle_signup_form_submit}
+          >
+            Sign Up
+          </button>
+        </form>
+      </FormCard>
+    );
+  }
+}
+
+class VerificationForm extends Component {
+  render() {
+    return (
+      <FormCard header="Verification">
+        {this.props.error && <p className="text-danger">{this.props.error}</p>}
+        <form>
+          <p>
+            We have sent you a confirmation code. Please enter the code in the
+            field below.
+          </p>
+          <input
+            className="form-control mb-4"
+            type="text"
+            id="verification_code"
+            placeholder="Code"
+            onChange={this.props.handle_change}
+            value={this.props.verification_code}
+          />
+          <button
+            className="btn btn-dark"
+            type="button"
+            onClick={this.props.handle_verification_form_submit}
+          >
+            verify email
+          </button>
+        </form>
+      </FormCard>
+    );
+  }
+}
+
+class FormCard extends Component {
+  render() {
+    return (
+      <div className="card mx-auto mt-5" style={{ maxWidth: "25rem" }}>
+        <div className="card-header">{this.props.header}</div>
+        <div className="card-body">{this.props.children}</div>
+      </div>
+    );
+  }
+}
+
+Signup.propTypes = {
+  userLogIn: PropTypes.func.isRequired,
+  auth_token: PropTypes.string
 };
 
-SignupInput.propTypes = {
-  name: PropTypes.string.isRequired,
-  placeholder: PropTypes.string,
-  type: PropTypes.oneOf(["text", "email", "password"]),
-  onChange: PropTypes.func.isRequired
+SignupForm.propTypes = {
+  error: PropTypes.string,
+  handle_change: PropTypes.func.isRequired,
+  username: PropTypes.string.isRequired,
+  email: PropTypes.string.isRequired,
+  password: PropTypes.string.isRequired,
+  handle_signup_form_submit: PropTypes.func.isRequired
 };
 
-SignupInput.defaultProps = {
-  type: "text"
+VerificationForm.propTypes = {
+  error: PropTypes.string,
+  handle_change: PropTypes.func.isRequired,
+  verification_code: PropTypes.string.isRequired,
+  handle_verification_form_submit: PropTypes.func.isRequired
+};
+
+FormCard.propTypes = {
+  header: PropTypes.node.isRequired,
+  children: PropTypes.node.isRequired
 };
 
 const mapStateToProps = state => {
-  return { ...state };
+  return {
+    auth_token: state.user.auth_token,
+    error_message: state.error.error_message
+  };
 };
 
-export default connect(mapStateToProps, {
-  signupUpdateValues,
-  signupSubmitForm,
-  signupSubmitPin,
-  signupEnd,
-  userLogIn
-})(SignupCard);
+export default connect(mapStateToProps, { userLogIn })(Signup);
