@@ -5,6 +5,7 @@ import { connect } from "react-redux";
 import { userLogIn } from "../redux/actions/userActions";
 import { ERRMSG } from "../redux/actions/types";
 import axios from "axios";
+import $ from "jquery";
 
 export class Signup extends Component {
   constructor(props) {
@@ -18,6 +19,18 @@ export class Signup extends Component {
       verification_completed: false,
       error: undefined
     };
+  }
+
+  componentDidMount() {
+    $(document).ready(function() {
+      $(document.body).keypress(function(event) {
+        if (event.keyCode === 13) $("#submit_button").click();
+      });
+    });
+  }
+
+  componentWillUnmount() {
+    $(document.body).unbind();
   }
 
   handle_change = e => {
@@ -133,6 +146,7 @@ class SignupForm extends Component {
             value={this.props.password}
           />
           <button
+            id="submit_button"
             className="btn btn-dark"
             type="button"
             onClick={this.props.handle_signup_form_submit}
@@ -164,6 +178,7 @@ class VerificationForm extends Component {
             value={this.props.verification_code}
           />
           <button
+            id="submit_button"
             className="btn btn-dark"
             type="button"
             onClick={this.props.handle_verification_form_submit}
