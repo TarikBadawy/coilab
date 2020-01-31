@@ -61,27 +61,30 @@ class Workspace extends Component {
     this.props.history.push("/");
   };
 
-  get_document_list = () => {
+  get_document_list = login_token => {
     let request = new URLSearchParams({
       list: true,
-      login_token: this.props.auth_token
+      login_token
     });
     axios
       .post("http://api.coilab.com/docs", request)
       .then(res => res.data)
       .then(data => {
-        data.status === "success"
-          ? this.setState({ documents: data.files })
-          : this.redirect_invalid_user(data.status);
+        if (data.status === "success") {
+          this.setState({ documents: data.files });
+        } else {
+          console.error(data);
+          this.redirect_invalid_user();
+        }
       })
       .catch(err => console.log(err));
   };
 
-  save_document = (delta, file_id) => {
+  save_document = (delta, name, file_id) => {
     let request = new URLSearchParams({
       save: true,
       file_id,
-      name: this.state.document_title,
+      name,
       content: JSON.stringify(delta),
       login_token: this.props.auth_token
     });
@@ -90,9 +93,17 @@ class Workspace extends Component {
       .then(res => res.data)
       .then(data => {
         if (data.status === "success") {
-          this.setState({ document_id: data.file_id });
-          this.get_document_list();
-        } else console.error(data.status);
+          this.setState({
+            document_id: data.file_id,
+            document_delta: delta,
+            document_title: name
+          });
+          this.get_document_list(this.props.auth_token);
+          this.set_editor_content();
+        } else {
+          console.error(data);
+          this.redirect_invalid_user();
+        }
       })
       .catch(err => console.log(err));
   };
@@ -107,9 +118,19 @@ class Workspace extends Component {
       .post("http://api.coilab.com/docs", request)
       .then(res => res.data)
       .then(data => {
-        data.status === "success"
-          ? this.setState({ document_id: data.file_id })
-          : console.error(data.status);
+        console.log(data);
+        if (data.status === "success") {
+          this.setState({
+            document_id: undefined,
+            document_title: undefined,
+            document_delta: undefined
+          });
+          this.get_document_list(this.props.auth_token);
+          this.set_editor_content();
+        } else {
+          console.error(data);
+          this.redirect_invalid_user();
+        }
       })
       .catch(err => console.log(err));
   };
@@ -131,20 +152,24 @@ class Workspace extends Component {
             document_delta: JSON.parse(data.content)
           });
           this.set_editor_content();
-        } else console.error(data.status);
+        } else {
+          console.error(data);
+          this.redirect_invalid_user();
+        }
       })
       .catch(err => console.log(err));
   };
 
   handle_create_document_button = () => {
-    this.save_document([{ insert: "\n" }]);
+    this.save_document([{ insert: "\n" }], "new document");
+  };
+
+  handle_delete_document_button = () => {
+    this.delete_document(this.state.document_id, this.props.auth_token);
   };
 
   handle_change = event => {
     this.setState({ [event.target.id]: event.target.value });
-    if (event.target.id === "document_title") {
-      this.get_document_list();
-    }
   };
 
   handle_list_document_pressed = event => {
@@ -152,7 +177,13 @@ class Workspace extends Component {
   };
 
   handle_save_button = () => {
-    this.save_document(this.state.editor.getContents(), this.state.document_id);
+    if (this.state.editor) {
+      this.save_document(
+        this.state.editor.getContents(),
+        this.state.document_title,
+        this.state.document_id
+      );
+    }
   };
 
   set_editor_content = () => {
@@ -170,11 +201,11 @@ class Workspace extends Component {
       .post("http://api.coilab.com/user", request)
       .then(res => res.data.login_status)
       .then(status => {
-        if (status !== true) {
-          this.redirect_invalid_user(status);
-        } else {
+        if (status === true) {
           this.create_editor();
-          this.get_document_list();
+          this.get_document_list(this.props.auth_token);
+        } else {
+          this.redirect_invalid_user(status);
         }
       })
       .catch(err => console.log(err));
@@ -182,24 +213,26 @@ class Workspace extends Component {
 
   render() {
     return (
-      <div className="d-flex">
-        <nav className="d-none d-md-block p-3 border-right vh-100">
+      <div className="row m-0 pt-3" style={{ maxWidth: "100%" }}>
+        <div className="col-sm-3 border-right mb-4">
           <DocumentList
             documents={this.state.documents}
             document_id={this.state.document_id}
+            get_document_list={this.get_document_list}
             handle_list_document_pressed={this.handle_list_document_pressed}
+            handle_save_button={this.handle_save_button}
             handle_create_document_button={this.handle_create_document_button}
+            handle_delete_document_button={this.handle_delete_document_button}
           />
-        </nav>
-        <main className="p-3 mx-auto">
+          <hr />
+        </div>
+        <div className="col-sm-9">
           <Document
             document_id={this.state.document_id}
             document_title={this.state.document_title}
             handle_change={this.handle_change}
-            handle_save_button={this.handle_save_button}
-            handle_create_document_button={this.handle_create_document_button}
           />
-        </main>
+        </div>
       </div>
     );
   }
@@ -207,37 +240,76 @@ class Workspace extends Component {
 
 class DocumentList extends Component {
   render() {
-    let document_cards =
-      this.props.documents &&
-      this.props.documents.map((document, index) => (
-        <li className="list-group-item" key={index}>
-          <button
-            id={document.file_id}
-            className={
-              "list-group-item list-group-item-action " +
-              (this.props.document_id === document.file_id
-                ? "bg-warning"
-                : "bg-light")
-            }
-            onClick={this.props.handle_list_document_pressed}
-          >
-            {document.name}
-          </button>
-        </li>
-      ));
+    let list_item_style = {
+      textOverflow: "ellipsis",
+      overflow: "hidden",
+      whiteSpace: "nowrap",
+      cursor: "pointer",
+      borderRadius: "0px"
+    };
+
+    let document_cards = this.props.documents.map((document, index) => (
+      <li
+        className={
+          "list-group-item list-group-item-action list-group-item-info " +
+          (this.props.document_id === document.file_id && "active")
+        }
+        key={index}
+        onClick={this.props.handle_list_document_pressed}
+        id={document.file_id}
+        style={list_item_style}
+      >
+        {document.name}
+      </li>
+    ));
+
+    let buttons = {
+      save: (
+        <div
+          style={list_item_style}
+          key="save_button"
+          className="list-group-item list-group-item-action text-center list-group-item-primary"
+          onClick={this.props.handle_save_button}
+        >
+          <span role="img" aria-label="save">
+            💾
+          </span>
+        </div>
+      ),
+      create: (
+        <div
+          style={list_item_style}
+          key="create_button"
+          className="list-group-item list-group-item-action text-center list-group-item-primary"
+          onClick={this.props.handle_create_document_button}
+        >
+          <span role="img" aria-label="create">
+            ➕
+          </span>
+        </div>
+      ),
+      delete: (
+        <div
+          style={list_item_style}
+          key="delete_button"
+          className="list-group-item list-group-item-action text-center list-group-item-danger"
+          onClick={this.props.handle_delete_document_button}
+        >
+          <span role="img" aria-label="delete">
+            🗑
+          </span>
+        </div>
+      )
+    };
 
     return (
-      <ul className="list-group">
-        <li className="list-group-item">
-          <button
-            className="text-center list-group-item list-group-item-action bg-secondary text-light"
-            onClick={this.props.handle_create_document_button}
-          >
-            create document
-          </button>
-        </li>
-        {document_cards ? document_cards : "Something went wrong"}
-      </ul>
+      <>
+        <ul className="list-group list-group-horizontal mb-2">
+          {buttons.create}
+          {this.props.document_id && [buttons.save, buttons.delete]}
+        </ul>
+        <ul className="list-group">{document_cards}</ul>
+      </>
     );
   }
 }
@@ -245,10 +317,10 @@ class DocumentList extends Component {
 class Document extends Component {
   render() {
     return (
-      <div style={{ maxWidth: "48rem" }}>
+      <div style={{ maxWidth: "100%", minWidth: "100%" }}>
         <form>
           <input
-            className="form-control mb-4"
+            className="form-control mb-4 rounded-0"
             type="text"
             id="document_title"
             placeholder="Title"
@@ -258,16 +330,6 @@ class Document extends Component {
         </form>
         <div id="toolbar" />
         <div id="editor" style={{ minHeight: "40rem" }} />
-        <button
-          className="btn btn-dark m-2"
-          onClick={
-            this.props.document_id
-              ? this.props.handle_save_button
-              : this.props.handle_create_document_button
-          }
-        >
-          save doc
-        </button>
       </div>
     );
   }
@@ -276,16 +338,17 @@ class Document extends Component {
 DocumentList.propTypes = {
   documents: PropTypes.array,
   document_id: PropTypes.string,
+  get_document_list: PropTypes.func.isRequired,
   handle_list_document_pressed: PropTypes.func.isRequired,
-  handle_create_document_button: PropTypes.func.isRequired
+  handle_save_button: PropTypes.func.isRequired,
+  handle_create_document_button: PropTypes.func.isRequired,
+  handle_delete_document_button: PropTypes.func.isRequired
 };
 
 Document.propTypes = {
   document_id: PropTypes.string,
   document_title: PropTypes.string,
-  handle_change: PropTypes.func.isRequired,
-  handle_save_button: PropTypes.func.isRequired,
-  handle_create_document_button: PropTypes.func.isRequired
+  handle_change: PropTypes.func.isRequired
 };
 
 const mapStateToProps = state => {
